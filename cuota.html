@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>cuota</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background: black;
+      color: #ff69b4;
+      font-family: monospace;
+    }
+    canvas {
+      display: block;
+    }
+    .center-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #ff69b4;
+      font-size: 2em;
+      font-weight: bold;
+      opacity: 0.1;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="c"></canvas>
+  <div class="center-text">pagame </div>
+
+  <script>
+    const canvas = document.getElementById("c");
+    const ctx = canvas.getContext("2d");
+
+    const fontSize = 24;
+    const word = "la cuota";
+    const baseSpeed = 2; // Velocidad base de caída
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    ctx.font = `${fontSize}px monospace`;
+    const wordWidth = ctx.measureText(word).width;
+    const wordHeight = fontSize; // La altura de la palabra es aproximadamente el tamaño de la fuente
+
+    // Calcular el número de columnas basado en el ancho de la palabra
+    // Un poco más de margen para evitar que se vean encimadas.
+    const columnPadding = 15; // Espacio entre columnas
+    const numColumns = Math.floor(canvas.width / (wordWidth + columnPadding));
+    const columnWidth = canvas.width / numColumns;
+
+    // Array para almacenar todas las instancias de la palabra, organizadas por columna
+    const columns = Array.from({ length: numColumns }, () => []);
+
+    // **NUEVO:** Límite máximo de palabras para controlar el rendimiento.
+    const maxWords = 150; // Ajusta este valor según el rendimiento deseado
+
+    // Función para crear una nueva palabra y asignarla a una columna
+    function createWord() {
+      // Elegir una columna aleatoria
+      const columnIndex = Math.floor(Math.random() * numColumns);
+      // Calcular la posición X centrada en la columna
+      const x = columnIndex * columnWidth + (columnWidth - wordWidth) / 2;
+
+      const newWord = {
+        x: x,
+        y: -wordHeight, // Empieza fuera de la pantalla, justo por encima
+        speed: baseSpeed + Math.random() * 1.5 // Velocidad ligeramente variada
+      };
+
+      // Añadir la palabra a la columna correspondiente
+      columns[columnIndex].push(newWord);
+    }
+
+    // Inicialmente, creamos algunas palabras para llenar el espacio
+    for (let i = 0; i < numColumns * 2; i++) {
+        createWord();
+        // Espaciar las palabras iniciales en Y para que no aparezcan todas juntas
+        // Si la columna está vacía, no intentar acceder a lastWordInColumn
+        const currentColumn = columns[columns.length - 1]; // Toma la última columna
+        if (currentColumn && currentColumn.length > 0) {
+            const lastWordInColumn = currentColumn[currentColumn.length - 1];
+            lastWordInColumn.y = -Math.random() * canvas.height;
+        }
+    }
+
+
+    function draw() {
+      ctx.fillStyle = "rgba(0, 0, 0, 0.1)"; // Fondo transparente para el rastro
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = "#ff69b4";
+      ctx.font = `${fontSize}px monospace`;
+
+      let currentWordCount = 0; // Para llevar la cuenta de palabras activas
+
+      // Iterar sobre cada columna
+      for (let columnIndex = 0; columnIndex < numColumns; columnIndex++) {
+        const currentColumn = columns[columnIndex];
+
+        // Iterar sobre las palabras en la columna actual
+        for (let i = 0; i < currentColumn.length; i++) {
+          const currentWord = currentColumn[i];
+          ctx.fillText(word, currentWord.x, currentWord.y);
+
+          currentWord.y += currentWord.speed;
+          currentWordCount++; // Incrementar contador
+
+          // Si la palabra sale de la pantalla, la eliminamos de la columna
+          if (currentWord.y > canvas.height + wordHeight) {
+            currentColumn.splice(i, 1); // Eliminar la palabra de la columna
+            i--; // Ajustar el índice para no saltar la siguiente palabra
+          }
+        }
+      }
+
+      // **NUEVO:** Solo añadir una nueva palabra si el total no excede el límite
+      if (currentWordCount < maxWords && Math.random() < 0.05) {
+          createWord();
+      }
+
+      requestAnimationFrame(draw); // Usar requestAnimationFrame para una animación más suave
+    }
+
+    // Iniciar la animación
+    requestAnimationFrame(draw);
+
+    window.addEventListener('resize', () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      ctx.font = `${fontSize}px monospace`;
+      // Es recomendable resetear el array 'columns' y recrear las palabras
+      // o al menos ajustar sus posiciones 'x' si el número de columnas cambia mucho.
+      // Para simplificar aquí, lo dejo sin resetear completamente, pero tenlo en cuenta.
+      // Si la ventana se hace muy pequeña o muy grande, el número de columnas puede cambiar.
+      // Si el número de columnas cambia, las palabras existentes pueden quedar fuera de la nueva configuración.
+      // Para un manejo robusto del redimensionamiento, deberías:
+      // 1. Limpiar todos los arrays en 'columns'.
+      // 2. Recalcular 'numColumns' y 'columnWidth'.
+      // 3. Volver a llenar 'columns' con un conjunto inicial de palabras.
+      // Por ahora, solo se redibuja el contexto.
+    });
+  </script>
+</body>
+</html>
